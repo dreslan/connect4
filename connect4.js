@@ -12,10 +12,21 @@ var Board = (function () {
         }
     }
     Board.prototype.Drop = function (col, player) {
-        return false;
+        // the board fills from the bottom up, so check from bottom row and move up
+        for (var row = this.rows - 1; row >= 0; row--) {
+            if (this.board[row][col].owner == 0) {
+                this.board[row][col].owner = player;
+                return [row, col];
+            }
+        }
+        // the column is full, let the caller know
+        return [-1, -1];
     };
     Board.prototype.win = function () {
-        return false;
+        return this.checkRowsForWin() ? true :
+            this.checkColsForWin() ? true :
+                this.checkRightDiagForWin() ? true :
+                    this.checkLeftDiagForWin() ? true : false;
     };
     Board.prototype.checkRowsForWin = function () {
         return false;
@@ -83,15 +94,36 @@ var Game = (function () {
         spot.setAttribute("data-col", col.toString());
         spot.onclick = function () { _this.spotClicked(spot); };
         spot.style.cssText = "top: " + 100 * row + "px; left: " + 100 * col + "px";
-        this.board.board[row][col].element = spot;
         return spot;
     };
+    // this event handler could use some refactoring
     Game.prototype.spotClicked = function (spot) {
         if (this.win)
             return;
         var row = spot.getAttribute("data-row");
         var col = spot.getAttribute("data-col");
         console.log("\"Click at board[" + row + "][" + col + "]\"");
+        var coords = this.board.Drop(parseInt(col, 10), this.currentPlayer);
+        console.log("Dropping token at: " + coords);
+        if (coords[0] !== -1) {
+            var target = document.querySelector("div[data-row='" + coords[0] + "'][data-col='" + coords[1] + "']");
+            if (this.currentPlayer === Player.Player1) {
+                target.className = "spot player1";
+                this.currentPlayer = Player.Player2;
+                if (this.win = this.board.win())
+                    alert("You won Player1!");
+            }
+            else {
+                target.className = "spot player2";
+                this.currentPlayer = Player.Player1;
+                if (this.win = this.board.win())
+                    alert("You won Player2!");
+            }
+            if (!this.win)
+                document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
+            else
+                document.getElementById("status").textContent = "Game over. Refresh to start over.";
+        }
     };
     return Game;
 }());

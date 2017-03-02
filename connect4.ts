@@ -1,4 +1,4 @@
-// used to hold and update the state of a connect4 board
+﻿// used to hold and update the state of a connect4 board
 class Board {
     public element: HTMLElement;
     public board: Spot[][];
@@ -17,12 +17,23 @@ class Board {
         }
     }
 
-    public Drop(col: number, player: Player): boolean {
-        return false;
+    public Drop(col: number, player: Player): number[] {
+        // the board fills from the bottom up, so check from bottom row and move up
+        for (var row = this.rows - 1; row >= 0; row--) {
+            if (this.board[row][col].owner == 0) {
+                this.board[row][col].owner = player;
+                return [row, col];
+            }
+        }
+        // the column is full, let the caller know
+        return [-1, -1];
     }
 
     win(): boolean {
-        return false;
+        return this.checkRowsForWin() ? true :
+            this.checkColsForWin() ? true :
+                this.checkRightDiagForWin() ? true :
+                    this.checkLeftDiagForWin() ? true : false;
     }
 
     private checkRowsForWin(): boolean {
@@ -44,7 +55,6 @@ class Board {
 
 // a spot on a connect4 board
 class Spot {
-    public element: HTMLElement;
     owner: Player;
 
     constructor() {
@@ -98,23 +108,41 @@ class Game {
         }
     }
 
-    drawEmptySpot(row: number, col: number) {
+    drawEmptySpot(row: number, col: number) : HTMLElement {
         let spot = document.createElement("div");
         spot.className = "spot empty";
         spot.setAttribute("data-row", row.toString());
         spot.setAttribute("data-col", col.toString());
         spot.onclick = () => { this.spotClicked(spot) };
         spot.style.cssText = `top: ${100 * row}px; left: ${100 * col}px`;
-        this.board.board[row][col].element = spot;
         return spot;
     }
 
+    // this event handler could use some refactoring
     spotClicked(spot: HTMLElement) {
         if (this.win) return;
 
         let row = spot.getAttribute("data-row");
         let col = spot.getAttribute("data-col");
         console.log(`"Click at board[${row}][${col}]"`);
+        let coords = this.board.Drop(parseInt(col, 10), this.currentPlayer);
+        console.log("Dropping token at: " + coords);
+        if (coords[0] !== -1) {
+            let target = document.querySelector(`div[data-row='${coords[0]}'][data-col='${coords[1]}']`);
+            if (this.currentPlayer === Player.Player1) {
+                target.className = "spot player1";
+                this.currentPlayer = Player.Player2;
+                if (this.win = this.board.win()) alert("You won Player1!");
+            }
+            else {
+                target.className = "spot player2";
+                this.currentPlayer = Player.Player1;
+                if (this.win = this.board.win()) alert("You won Player2!");
+            }
+
+            if (!this.win) document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
+            else document.getElementById("status").textContent = "Game over. Refresh to start over.";
+        }
     }
 }
 
