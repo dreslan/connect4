@@ -118,15 +118,31 @@ var Mode;
 // would like to break this up more
 var Game = (function () {
     function Game(element) {
+        var _this = this;
         this.turn = "it's your turn! Click a column to drop a token.";
         this.boardElement = element;
         this.board = new Board(6, 7);
         this.mode = Mode.PvP;
         this.currentPlayer = Player.Player1;
         this.drawBoard();
+        this.aiNormal = new GameAINormal(Player.Player2, Player.Player1);
+        this.aiHard = new GameAIHard(Player.Player2, Player.Player1);
+        // set up button listeners
+        document.getElementById("pvp").onclick = function () { _this.pvpClicked(); };
+        document.getElementById("ai-normal").onclick = function () { _this.aiNormalClicked(); };
+        document.getElementById("ai-hard").onclick = function () { _this.aiHardClicked(); };
         // let the current player know that it's their turn...
         document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
     }
+    Game.prototype.pvpClicked = function () {
+        this.reset(Mode.PvP);
+    };
+    Game.prototype.aiNormalClicked = function () {
+        this.reset(Mode.PvAINormal);
+    };
+    Game.prototype.aiHardClicked = function () {
+        this.reset(Mode.PvAIHard);
+    };
     Game.prototype.drawBoard = function () {
         for (var i = 0; i < this.board.rows; i++) {
             for (var j = 0; j < this.board.cols; j++) {
@@ -149,7 +165,7 @@ var Game = (function () {
     // this event handler could use some refactoring
     Game.prototype.spotClicked = function (spot) {
         if (this.win) {
-            this.reset();
+            this.reset(this.mode);
             return;
         }
         switch (this.mode) {
@@ -196,10 +212,31 @@ var Game = (function () {
             document.getElementById("status").textContent = "Not your turn.";
             return;
         }
+        if (this.currentPlayer == Player.Player1) {
+            this.pvpHandler(spot);
+            if (this.win)
+                return;
+            var coords = this.aiNormal.pickMove(this.board);
+            console.log("Dropping token at: " + coords + " for computer");
+            if (coords[0] !== -1) {
+                var target = document.querySelector("div[data-row='" + coords[0] + "'][data-col='" + coords[1] + "']");
+                target.className = "spot player2";
+                if (this.win = this.board.win())
+                    alert("Computer won!");
+                this.currentPlayer = Player.Player1;
+            }
+            if (!this.win)
+                document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
+            else {
+                document.getElementById("status").textContent = "Game over. Click on the board to reset.";
+            }
+            return;
+        }
     };
-    Game.prototype.reset = function () {
+    Game.prototype.reset = function (mode) {
         this.board = new Board(6, 7);
         this.win = false;
+        this.mode = mode;
         this.currentPlayer = Player.Player1;
         while (this.boardElement.hasChildNodes()) {
             this.boardElement.removeChild(this.boardElement.lastChild);
@@ -238,7 +275,10 @@ var GameAINormal = (function () {
     return GameAINormal;
 }());
 var GameAIHard = (function () {
-    function GameAIHard() {
+    function GameAIHard(me, opponent) {
+        this.me = me;
+        this.me = opponent;
+        this.board = new Board(6, 7);
     }
     GameAIHard.prototype.pickMove = function (board) {
         // check for a spot where we can go to prevent the player from winning

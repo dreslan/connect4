@@ -132,6 +132,8 @@ class Game {
     mode: Mode;
     boardElement: HTMLElement;
     turn: string = "it's your turn! Click a column to drop a token.";
+    aiNormal: GameAINormal;
+    aiHard: GameAIHard;
 
     constructor(element: HTMLElement) {
         this.boardElement = element;
@@ -139,9 +141,28 @@ class Game {
         this.mode = Mode.PvP;
         this.currentPlayer = Player.Player1;
         this.drawBoard();
+        this.aiNormal = new GameAINormal(Player.Player2, Player.Player1);
+        this.aiHard = new GameAIHard(Player.Player2, Player.Player1);
+
+        // set up button listeners
+        document.getElementById("pvp").onclick = () => { this.pvpClicked() };
+        document.getElementById("ai-normal").onclick = () => { this.aiNormalClicked() };
+        document.getElementById("ai-hard").onclick = () => { this.aiHardClicked() };
 
         // let the current player know that it's their turn...
         document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
+    }
+
+    pvpClicked() {
+        this.reset(Mode.PvP);
+    }
+
+    aiNormalClicked() {
+        this.reset(Mode.PvAINormal);
+    }
+
+    aiHardClicked() {
+        this.reset(Mode.PvAIHard);
     }
 
     drawBoard() {
@@ -167,7 +188,7 @@ class Game {
     // this event handler could use some refactoring
     spotClicked(spot: HTMLElement) {
         if (this.win) {
-            this.reset();
+            this.reset(this.mode);
             return;
         }
 
@@ -215,11 +236,35 @@ class Game {
             document.getElementById("status").textContent = "Not your turn.";
             return;
         }
+
+        if (this.currentPlayer == Player.Player1) {
+            this.pvpHandler(spot);
+
+            if (this.win) return;
+
+            let coords = this.aiNormal.pickMove(this.board);
+            console.log("Dropping token at: " + coords + " for computer");
+            if (coords[0] !== -1) {
+                let target = document.querySelector(`div[data-row='${coords[0]}'][data-col='${coords[1]}']`);
+                target.className = "spot player2";
+                if (this.win = this.board.win()) alert("Computer won!");
+                this.currentPlayer = Player.Player1;
+            }
+            if (!this.win) document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
+            else {
+                document.getElementById("status").textContent = "Game over. Click on the board to reset.";
+            }
+            return;
+        }
+
+
+        
     }
 
-    reset() {
+    reset(mode: Mode) {
         this.board = new Board(6,7);
         this.win = false;
+        this.mode = mode;
         this.currentPlayer = Player.Player1;
         while (this.boardElement.hasChildNodes()) {
             this.boardElement.removeChild(this.boardElement.lastChild);
@@ -266,6 +311,15 @@ class GameAINormal {
 }
 
 class GameAIHard {
+    me: Player;
+    opponent: Player;
+    board: Board;
+
+    constructor(me: Player, opponent: Player) {
+        this.me = me;
+        this.me = opponent;
+        this.board = new Board(6, 7);
+    }
 
     pickMove(board: Board) : number[] {
         // check for a spot where we can go to prevent the player from winning
