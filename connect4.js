@@ -11,7 +11,7 @@ var Board = (function () {
             }
         }
     }
-    Board.prototype.Drop = function (col, player) {
+    Board.prototype.drop = function (col, player) {
         // the board fills from the bottom up, so check from bottom row and move up
         for (var row = this.rows - 1; row >= 0; row--) {
             if (this.board[row][col].owner == 0) {
@@ -148,12 +148,27 @@ var Game = (function () {
     };
     // this event handler could use some refactoring
     Game.prototype.spotClicked = function (spot) {
-        if (this.win)
+        if (this.win) {
+            this.reset();
             return;
+        }
+        switch (this.mode) {
+            case Mode.PvP:
+                this.pvpHandler(spot);
+                break;
+            case Mode.PvAINormal:
+                this.aiHandler(spot);
+                break;
+            case Mode.PvAIHard:
+                this.aiHandler(spot);
+                break;
+        }
+    };
+    Game.prototype.pvpHandler = function (spot) {
         var row = spot.getAttribute("data-row");
         var col = spot.getAttribute("data-col");
         console.log("\"Click at board[" + row + "][" + col + "]\"");
-        var coords = this.board.Drop(parseInt(col, 10), this.currentPlayer);
+        var coords = this.board.drop(parseInt(col, 10), this.currentPlayer);
         console.log("Dropping token at: " + coords);
         if (coords[0] !== -1) {
             var target = document.querySelector("div[data-row='" + coords[0] + "'][data-col='" + coords[1] + "']");
@@ -172,15 +187,26 @@ var Game = (function () {
             if (!this.win)
                 document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
             else {
-                document.getElementById("status").textContent = "Game over. Refresh to start over.";
-                this.reset();
+                document.getElementById("status").textContent = "Game over. Click on the board to reset.";
             }
+        }
+    };
+    Game.prototype.aiHandler = function (spot) {
+        if (this.currentPlayer == Player.Player2) {
+            document.getElementById("status").textContent = "Not your turn.";
+            return;
         }
     };
     Game.prototype.reset = function () {
         this.board = new Board(6, 7);
         this.win = false;
+        this.currentPlayer = Player.Player1;
+        while (this.boardElement.hasChildNodes()) {
+            this.boardElement.removeChild(this.boardElement.lastChild);
+        }
         this.drawBoard();
+        // let the current player know that it's their turn...
+        document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
     };
     return Game;
 }());
@@ -196,7 +222,7 @@ var GameAINormal = (function () {
         // check for a spot where we can go to prevent the player from winning
         // choose first available spot
         for (var col = 0; col < board.cols; col++) {
-            var target = this.board.Drop(col, this.me);
+            var target = this.board.drop(col, this.me);
             if (target !== [-1, -1])
                 return target;
         }

@@ -16,7 +16,7 @@ class Board {
         }
     }
 
-    public Drop(col: number, player: Player): number[] {
+    public drop(col: number, player: Player): number[] {
         // the board fills from the bottom up, so check from bottom row and move up
         for (var row = this.rows - 1; row >= 0; row--) {
             if (this.board[row][col].owner == 0) {
@@ -166,12 +166,29 @@ class Game {
 
     // this event handler could use some refactoring
     spotClicked(spot: HTMLElement) {
-        if (this.win) return;
+        if (this.win) {
+            this.reset();
+            return;
+        }
 
+        switch (this.mode) {
+            case Mode.PvP:
+                this.pvpHandler(spot);
+                break;
+            case Mode.PvAINormal:
+                this.aiHandler(spot);
+                break;
+            case Mode.PvAIHard:
+                this.aiHandler(spot);
+                break;
+        }
+    }
+
+    pvpHandler(spot: HTMLElement) {
         let row = spot.getAttribute("data-row");
         let col = spot.getAttribute("data-col");
         console.log(`"Click at board[${row}][${col}]"`);
-        let coords = this.board.Drop(parseInt(col, 10), this.currentPlayer);
+        let coords = this.board.drop(parseInt(col, 10), this.currentPlayer);
         console.log("Dropping token at: " + coords);
         if (coords[0] !== -1) {
             let target = document.querySelector(`div[data-row='${coords[0]}'][data-col='${coords[1]}']`);
@@ -188,16 +205,28 @@ class Game {
 
             if (!this.win) document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
             else {
-                document.getElementById("status").textContent = "Game over. Refresh to start over.";
-                this.reset();
+                document.getElementById("status").textContent = "Game over. Click on the board to reset.";
             }
+        }
+    }
+
+    aiHandler(spot: HTMLElement) {
+        if (this.currentPlayer == Player.Player2) {
+            document.getElementById("status").textContent = "Not your turn.";
+            return;
         }
     }
 
     reset() {
         this.board = new Board(6,7);
         this.win = false;
+        this.currentPlayer = Player.Player1;
+        while (this.boardElement.hasChildNodes()) {
+            this.boardElement.removeChild(this.boardElement.lastChild);
+        }
         this.drawBoard();
+        // let the current player know that it's their turn...
+        document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn; 
     }
 }
 
@@ -220,7 +249,7 @@ class GameAINormal {
 
         // choose first available spot
         for (let col = 0; col < board.cols; col++) {
-            let target = this.board.Drop(col, this.me);
+            let target = this.board.drop(col, this.me);
             if (target !== [-1, -1]) return target;
         }
 
