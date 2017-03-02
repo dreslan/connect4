@@ -1,6 +1,5 @@
 ﻿// used to hold and update the state of a connect4 board
 class Board {
-    public element: HTMLElement;
     public board: Spot[][];
     public rows: number;
     public cols: number;
@@ -37,18 +36,65 @@ class Board {
     }
 
     private checkRowsForWin(): boolean {
+        // check bottom up
+        for (let row = this.rows - 1; row > 0; row--) {
+            // convert to string to make use of the search method
+            let rowHolder = "";
+            for (let col = 0; col < this.cols; col++) {
+                rowHolder += this.board[row][col].owner;
+            }
+            if (this.checkStringForWin(rowHolder)) return true;
+        }
         return false;
     }
 
     private checkColsForWin(): boolean {
+        for (let col = 0; col < this.cols; col++) {
+            // convert to string to make use of search method
+            let colHolder = "";
+            for (let row = this.rows - 1; row > 0; row--) {
+                colHolder += this.board[row][col].owner;
+            }
+            if (this.checkStringForWin(colHolder)) return true;
+        }
         return false;
     }
 
     private checkRightDiagForWin(): boolean {
+        for (let row = 0; row < 3; row++) {
+            for (let col = 0; col < 4; col++) {
+                let diag = "";
+                diag += this.board[row][col].owner;
+                diag += this.board[row + 1][col + 1].owner;
+                diag += this.board[row + 2][col + 2].owner;
+                diag += this.board[row + 3][col + 3].owner;
+                if (this.checkStringForWin(diag)) return true;
+            }
+        }
         return false;
     }
 
     private checkLeftDiagForWin(): boolean {
+        for (let row = 0; row < 3; row++) {
+            for (let col = 6; col > 2; col--) {
+                let diag = "";
+                diag += this.board[row][col].owner;
+                diag += this.board[row + 1][col - 1].owner;
+                diag += this.board[row + 2][col - 2].owner;
+                diag += this.board[row + 3][col - 3].owner;
+                if (this.checkStringForWin(diag)) return true;
+            }
+        }
+        return false;
+    }
+
+    checkStringForWin(s: string): boolean {
+        if (s.search("1111") !== -1) {
+            return true;
+        }
+        if (s.search("2222") !== -1) {
+            return true;
+        }
         return false;
     }
 }
@@ -141,17 +187,65 @@ class Game {
             }
 
             if (!this.win) document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
-            else document.getElementById("status").textContent = "Game over. Refresh to start over.";
+            else {
+                document.getElementById("status").textContent = "Game over. Refresh to start over.";
+                this.reset();
+            }
         }
+    }
+
+    reset() {
+        this.board = new Board(6,7);
+        this.win = false;
+        this.drawBoard();
     }
 }
 
 class GameAINormal {
+    me: Player;
+    opponent: Player;
+    board: Board;
 
+    constructor(me: Player, opponent: Player) {
+        this.me = me;
+        this.me = opponent;
+        this.board = new Board(6,7);
+    }
+
+    pickMove(board: Board): number[] {
+        //first get a local copy of the board state to work with
+        this.updateBoard(board);
+
+        // check for a spot where we can go to prevent the player from winning
+
+        // choose first available spot
+        for (let col = 0; col < board.cols; col++) {
+            let target = this.board.Drop(col, this.me);
+            if (target !== [-1, -1]) return target;
+        }
+
+        return [-1, -1];
+    }
+
+    updateBoard(board: Board) {
+        for (let row = 0; row < board.rows; row++) {
+            for (let col = 0; col < board.cols; col++) {
+                this.board.board[row][col] = board.board[row][col];
+            }
+        }
+    }
 }
 
 class GameAIHard {
 
+    pickMove(board: Board) : number[] {
+        // check for a spot where we can go to prevent the player from winning
+
+        // check for a spot where we can go to prevent the player from winning
+
+        // choose first available spot
+        return [-1, -1];
+    }
 }
 
 window.onload = () => {

@@ -29,15 +29,65 @@ var Board = (function () {
                     this.checkLeftDiagForWin() ? true : false;
     };
     Board.prototype.checkRowsForWin = function () {
+        // check bottom up
+        for (var row = this.rows - 1; row > 0; row--) {
+            // convert to string to make use of the search method
+            var rowHolder = "";
+            for (var col = 0; col < this.cols; col++) {
+                rowHolder += this.board[row][col].owner;
+            }
+            if (this.checkStringForWin(rowHolder))
+                return true;
+        }
         return false;
     };
     Board.prototype.checkColsForWin = function () {
+        for (var col = 0; col < this.cols; col++) {
+            // convert to string to make use of search method
+            var colHolder = "";
+            for (var row = this.rows - 1; row > 0; row--) {
+                colHolder += this.board[row][col].owner;
+            }
+            if (this.checkStringForWin(colHolder))
+                return true;
+        }
         return false;
     };
     Board.prototype.checkRightDiagForWin = function () {
+        for (var row = 0; row < 3; row++) {
+            for (var col = 0; col < 4; col++) {
+                var diag = "";
+                diag += this.board[row][col].owner;
+                diag += this.board[row + 1][col + 1].owner;
+                diag += this.board[row + 2][col + 2].owner;
+                diag += this.board[row + 3][col + 3].owner;
+                if (this.checkStringForWin(diag))
+                    return true;
+            }
+        }
         return false;
     };
     Board.prototype.checkLeftDiagForWin = function () {
+        for (var row = 0; row < 3; row++) {
+            for (var col = 6; col > 2; col--) {
+                var diag = "";
+                diag += this.board[row][col].owner;
+                diag += this.board[row + 1][col - 1].owner;
+                diag += this.board[row + 2][col - 2].owner;
+                diag += this.board[row + 3][col - 3].owner;
+                if (this.checkStringForWin(diag))
+                    return true;
+            }
+        }
+        return false;
+    };
+    Board.prototype.checkStringForWin = function (s) {
+        if (s.search("1111") !== -1) {
+            return true;
+        }
+        if (s.search("2222") !== -1) {
+            return true;
+        }
         return false;
     };
     return Board;
@@ -121,20 +171,55 @@ var Game = (function () {
             }
             if (!this.win)
                 document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
-            else
+            else {
                 document.getElementById("status").textContent = "Game over. Refresh to start over.";
+                this.reset();
+            }
         }
+    };
+    Game.prototype.reset = function () {
+        this.board = new Board(6, 7);
+        this.win = false;
+        this.drawBoard();
     };
     return Game;
 }());
 var GameAINormal = (function () {
-    function GameAINormal() {
+    function GameAINormal(me, opponent) {
+        this.me = me;
+        this.me = opponent;
+        this.board = new Board(6, 7);
     }
+    GameAINormal.prototype.pickMove = function (board) {
+        //first get a local copy of the board state to work with
+        this.updateBoard(board);
+        // check for a spot where we can go to prevent the player from winning
+        // choose first available spot
+        for (var col = 0; col < board.cols; col++) {
+            var target = this.board.Drop(col, this.me);
+            if (target !== [-1, -1])
+                return target;
+        }
+        return [-1, -1];
+    };
+    GameAINormal.prototype.updateBoard = function (board) {
+        for (var row = 0; row < board.rows; row++) {
+            for (var col = 0; col < board.cols; col++) {
+                this.board.board[row][col] = board.board[row][col];
+            }
+        }
+    };
     return GameAINormal;
 }());
 var GameAIHard = (function () {
     function GameAIHard() {
     }
+    GameAIHard.prototype.pickMove = function (board) {
+        // check for a spot where we can go to prevent the player from winning
+        // check for a spot where we can go to prevent the player from winning
+        // choose first available spot
+        return [-1, -1];
+    };
     return GameAIHard;
 }());
 window.onload = function () {
