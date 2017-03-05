@@ -14,8 +14,18 @@ var Board = (function () {
     Board.prototype.drop = function (col, player) {
         // the board fills from the bottom up, so check from bottom row and move up
         for (var row = this.rows - 1; row >= 0; row--) {
-            if (this.board[row][col].owner == 0) {
+            if (this.board[row][col].owner == Player.None) {
                 this.board[row][col].owner = player;
+                return [row, col];
+            }
+        }
+        // the column is full, let the caller know
+        return [-1, -1];
+    };
+    Board.prototype.fakeDrop = function (col) {
+        // the board fills from the bottom up, so check from bottom row and move up
+        for (var row = this.rows - 1; row >= 0; row--) {
+            if (this.board[row][col].owner == Player.None) {
                 return [row, col];
             }
         }
@@ -221,9 +231,16 @@ var Game = (function () {
             if (coords[0] !== -1) {
                 var target = document.querySelector("div[data-row='" + coords[0] + "'][data-col='" + coords[1] + "']");
                 target.className = "spot player2";
+                console.log(this.board.board);
                 if (this.win = this.board.win())
                     alert("Computer won!");
                 this.currentPlayer = Player.Player1;
+            }
+            if (coords[0] === -1) {
+                // must be a tie
+                alert("Tie! Click to play again.");
+                this.reset(Mode.PvAINormal);
+                return;
             }
             if (!this.win)
                 document.getElementById("status").textContent = Player[this.currentPlayer] + " " + this.turn;
@@ -250,27 +267,46 @@ var Game = (function () {
 var GameAINormal = (function () {
     function GameAINormal(me, opponent) {
         this.me = me;
-        this.me = opponent;
+        this.opponent = opponent;
         this.board = new Board(6, 7);
     }
     GameAINormal.prototype.pickMove = function (board) {
-        //first get a local copy of the board state to work with
+        // get the latest board
         this.updateBoard(board);
-        // check for a spot where we can go to prevent the player from winning
-        // choose first available spot
+        // check for a spot where we can go to win
         for (var col = 0; col < board.cols; col++) {
-            var target = this.board.drop(col, this.me);
-            if (target !== [-1, -1])
-                return target;
+            var target = board.fakeDrop(col);
+            if (target[0] !== -1) {
+                this.board.drop(col, this.me);
+                if (this.board.win()) {
+                    // computer wins by going here so do it
+                    board.drop(col, this.me);
+                    return target;
+                }
+                else
+                    this.board.board[target[0]][target[1]].owner = Player.None;
+            }
         }
+        // choose a spot at random until an available one is found
+        var cols = [0, 1, 2, 3, 4, 5, 6];
+        while (cols.length != 0) {
+            var col = cols[Math.floor(Math.random() * cols.length)];
+            var target = board.fakeDrop(col);
+            if (target[0] !== -1) {
+                board.drop(col, this.me);
+                return target;
+            }
+        }
+        // no spots found, it must be a tie
         return [-1, -1];
     };
     GameAINormal.prototype.updateBoard = function (board) {
-        for (var row = 0; row < board.rows; row++) {
-            for (var col = 0; col < board.cols; col++) {
-                this.board.board[row][col] = board.board[row][col];
+        for (var row = 0; row < this.board.rows; row++) {
+            for (var col = 0; col < this.board.cols; col++) {
+                this.board.board[row][col].owner = board.board[row][col].owner;
             }
         }
+        console.log(this.board.board);
     };
     return GameAINormal;
 }());
