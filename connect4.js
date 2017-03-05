@@ -1,9 +1,14 @@
 // used to hold and update the state of a connect4 board
 var Board = (function () {
-    function Board(rows, cols) {
+    function Board(rows, cols, winLength) {
         this.rows = rows;
         this.cols = cols;
+        this.winLength = winLength;
         this.board = [];
+        this.player1Win = this.repeatString("1", this.winLength);
+        this.player2Win = this.repeatString("2", this.winLength);
+        console.log(this.player1Win);
+        console.log(this.player2Win);
         for (var i = 0; i < rows; i++) {
             this.board[i] = [];
             for (var j = 0; j < cols; j++) {
@@ -92,13 +97,20 @@ var Board = (function () {
         return false;
     };
     Board.prototype.checkStringForWin = function (s) {
-        if (s.search("1111") !== -1) {
+        if (s.search(this.player1Win) !== -1) {
             return true;
         }
-        if (s.search("2222") !== -1) {
+        if (s.search(this.player2Win) !== -1) {
             return true;
         }
         return false;
+    };
+    Board.prototype.repeatString = function (s, numTimesToRepeat) {
+        var result = "";
+        for (var i = 0; i < numTimesToRepeat; i++) {
+            result += s;
+        }
+        return result;
     };
     return Board;
 }());
@@ -131,12 +143,12 @@ var Game = (function () {
         var _this = this;
         this.turn = "it's your turn! Click a column to drop a token.";
         this.boardElement = element;
-        this.board = new Board(6, 7);
+        this.board = new Board(6, 7, 4);
         this.mode = Mode.PvP;
         this.currentPlayer = Player.Player1;
         this.drawBoard();
-        this.aiNormal = new GameAINormal(Player.Player2, Player.Player1);
-        this.aiHard = new GameAIHard(Player.Player2, Player.Player1);
+        this.aiNormal = new GameAINormal(Player.Player2, Player.Player1, this.board);
+        this.aiHard = new GameAIHard(Player.Player2, Player.Player1, this.board);
         // set up button listeners
         document.getElementById("pvp").onclick = function () { _this.pvpClicked(); };
         document.getElementById("ai-normal").onclick = function () { _this.aiNormalClicked(); };
@@ -252,7 +264,7 @@ var Game = (function () {
         }
     };
     Game.prototype.reset = function (mode) {
-        this.board = new Board(6, 7);
+        this.board = new Board(this.board.rows, this.board.cols, this.board.winLength);
         this.win = false;
         this.mode = mode;
         this.currentPlayer = Player.Player1;
@@ -266,10 +278,10 @@ var Game = (function () {
     return Game;
 }());
 var GameAINormal = (function () {
-    function GameAINormal(me, opponent) {
+    function GameAINormal(me, opponent, board) {
         this.me = me;
         this.opponent = opponent;
-        this.board = new Board(6, 7);
+        this.board = new Board(board.rows, board.cols, board.winLength);
     }
     GameAINormal.prototype.pickMove = function (board) {
         // get the latest board
@@ -289,7 +301,10 @@ var GameAINormal = (function () {
             }
         }
         // choose a spot at random until an available one is found
-        var cols = [0, 1, 2, 3, 4, 5, 6];
+        var cols = [board.cols];
+        for (var i = 0; i < board.cols; i++) {
+            cols[i] = i;
+        }
         while (cols.length != 0) {
             var col = cols[Math.floor(Math.random() * cols.length)];
             var target = board.fakeDrop(col);
@@ -312,10 +327,10 @@ var GameAINormal = (function () {
     return GameAINormal;
 }());
 var GameAIHard = (function () {
-    function GameAIHard(me, opponent) {
+    function GameAIHard(me, opponent, board) {
         this.me = me;
         this.opponent = opponent;
-        this.board = new Board(6, 7);
+        this.board = new Board(board.rows, board.cols, board.winLength);
     }
     GameAIHard.prototype.pickMove = function (board) {
         // get the latest board

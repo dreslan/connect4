@@ -3,11 +3,19 @@ class Board {
     public board: Spot[][];
     public rows: number;
     public cols: number;
+    public winLength: number;
+    private player1Win;
+    private player2Win;
 
-    constructor(rows: number, cols: number) {
+    constructor(rows: number, cols: number, winLength: number) {
         this.rows = rows;
         this.cols = cols;
+        this.winLength = winLength;
         this.board = [];
+        this.player1Win = this.repeatString("1", this.winLength);
+        this.player2Win = this.repeatString("2", this.winLength);
+        console.log(this.player1Win);
+        console.log(this.player2Win);
         for (let i = 0; i < rows; i++) {
             this.board[i] = [];
             for (let j = 0; j < cols; j++) {
@@ -100,13 +108,21 @@ class Board {
     }
 
     checkStringForWin(s: string): boolean {
-        if (s.search("1111") !== -1) {
+        if (s.search(this.player1Win) !== -1) {
             return true;
         }
-        if (s.search("2222") !== -1) {
+        if (s.search(this.player2Win) !== -1) {
             return true;
         }
         return false;
+    }
+
+    repeatString(s: string, numTimesToRepeat: number): string {
+        let result = "";
+        for (let i = 0; i < numTimesToRepeat; i++) {
+            result += s;
+        }
+        return result;
     }
 }
 
@@ -148,12 +164,12 @@ class Game {
 
     constructor(element: HTMLElement) {
         this.boardElement = element;
-        this.board = new Board(6, 7);
+        this.board = new Board(6, 7, 4);
         this.mode = Mode.PvP;
         this.currentPlayer = Player.Player1;
         this.drawBoard();
-        this.aiNormal = new GameAINormal(Player.Player2, Player.Player1);
-        this.aiHard = new GameAIHard(Player.Player2, Player.Player1);
+        this.aiNormal = new GameAINormal(Player.Player2, Player.Player1, this.board);
+        this.aiHard = new GameAIHard(Player.Player2, Player.Player1, this.board);
 
         // set up button listeners
         document.getElementById("pvp").onclick = () => { this.pvpClicked() };
@@ -283,7 +299,7 @@ class Game {
     }
 
     reset(mode: Mode) {
-        this.board = new Board(6,7);
+        this.board = new Board(this.board.rows,this.board.cols, this.board.winLength);
         this.win = false;
         this.mode = mode;
         this.currentPlayer = Player.Player1;
@@ -301,10 +317,10 @@ class GameAINormal {
     opponent: Player;
     board: Board;
 
-    constructor(me: Player, opponent: Player) {
+    constructor(me: Player, opponent: Player, board: Board) {
         this.me = me;
         this.opponent = opponent;
-        this.board = new Board(6, 7);
+        this.board = new Board(board.rows, board.cols, board.winLength);
     }
 
     pickMove(board: Board): number[] {
@@ -326,7 +342,10 @@ class GameAINormal {
          }
 
         // choose a spot at random until an available one is found
-        let cols = [0, 1, 2, 3, 4, 5, 6];
+        let cols : number[] = [board.cols];
+        for (let i = 0; i < board.cols; i++) {
+            cols[i] = i;
+        }
         while (cols.length != 0) {
             let col = cols[Math.floor(Math.random() * cols.length)];
             let target = board.fakeDrop(col);
@@ -356,10 +375,10 @@ class GameAIHard {
     opponent: Player;
     board: Board;
 
-    constructor(me: Player, opponent: Player) {
+    constructor(me: Player, opponent: Player, board: Board) {
         this.me = me;
         this.opponent = opponent;
-        this.board = new Board(6, 7);
+        this.board = new Board(board.rows, board.cols, board.winLength);
     }
 
     pickMove(board: Board): number[] {
