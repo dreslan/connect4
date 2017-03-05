@@ -254,7 +254,9 @@ class Game {
 
             if (this.win) return;
 
-            let coords = this.aiNormal.pickMove(this.board);
+            let coords : number[];
+            (this.mode == Mode.PvAINormal) ? coords = this.aiNormal.pickMove(this.board) : coords = this.aiHard.pickMove(this.board);
+
             console.log("Dropping token at: " + coords + " for computer");
             if (coords[0] !== -1) {
                 let target = document.querySelector(`div[data-row='${coords[0]}'][data-col='${coords[1]}']`);
@@ -356,17 +358,63 @@ class GameAIHard {
 
     constructor(me: Player, opponent: Player) {
         this.me = me;
-        this.me = opponent;
+        this.opponent = opponent;
         this.board = new Board(6, 7);
     }
 
-    pickMove(board: Board) : number[] {
-        // check for a spot where we can go to prevent the player from winning
+    pickMove(board: Board): number[] {
+        // get the latest board
+        this.updateBoard(board);
 
+        // check for a spot where we can go to win
+        for (let col = 0; col < board.cols; col++) {
+            let target = board.fakeDrop(col);
+            if (target[0] !== -1) {
+                this.board.drop(col, this.me);
+                if (this.board.win()) {
+                    // computer wins by going here so do it
+                    board.drop(col, this.me);
+                    return target;
+                }
+                else this.board.board[target[0]][target[1]].owner = Player.None;
+            }
+        }
         // check for a spot where we can go to prevent the player from winning
+        for (let col = 0; col < board.cols; col++) {
+            let target = board.fakeDrop(col);
+            if (target[0] !== -1) {
+                this.board.drop(col, this.opponent);
+                if (this.board.win()) {
+                    // computer prevents opponent from winning by going here so do it
+                    board.drop(col, this.me);
+                    return target;
+                }
+                else this.board.board[target[0]][target[1]].owner = Player.None;
+            }
+        }
 
-        // choose first available spot
+        // choose a spot at random until an available one is found
+        let cols = [0, 1, 2, 3, 4, 5, 6];
+        while (cols.length != 0) {
+            let col = cols[Math.floor(Math.random() * cols.length)];
+            let target = board.fakeDrop(col);
+            if (target[0] !== -1) {
+                board.drop(col, this.me);
+                return target;
+            }
+        }
+
+        // no spots found, it must be a tie
         return [-1, -1];
+    }
+
+    updateBoard(board: Board) {
+        for (let row = 0; row < this.board.rows; row++) {
+            for (let col = 0; col < this.board.cols; col++) {
+                this.board.board[row][col].owner = board.board[row][col].owner;
+            }
+        }
+        console.log(this.board.board);
     }
 }
 
